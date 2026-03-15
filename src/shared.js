@@ -230,7 +230,7 @@ function renderOpenFolderScript() {
 function openFolder(p) {
   fetch('/open-folder', {
     method: 'POST',
-    headers: {'Content-Type':'application/json', 'X-YellyRock-Token': window._ycToken || ''},
+    headers: {'Content-Type':'application/json', 'X-YellyClaw-Token': window._ycToken || ''},
     body: JSON.stringify({path: p})
   });
 }

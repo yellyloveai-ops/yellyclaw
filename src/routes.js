@@ -593,7 +593,7 @@ function handleSessionExport(req, res, id, config) {
 function handleSessionShare(req, res, id, config) {
   // Stub: return a fake URL (no real paste service configured)
   const sessionId = parseInt(id, 10);
-  json(res, 200, { url: `https://yellyrock.app/shared/session-${sessionId}` });
+  json(res, 200, { url: `https://yellyclaw.app/shared/session-${sessionId}` });
 }
 
 function handleSessionErrorReport(req, res, id, config) {
@@ -836,7 +836,7 @@ function handleOpenFolder(req, res, config) {
 
     // Path traversal guard
     const safePath = path.resolve(p);
-    const allowedPrefixes = ['/tmp/yellyrock', path.join(os.homedir(), '.yellyrock')];
+    const allowedPrefixes = ['/tmp/yellyclaw', path.join(os.homedir(), '.yellyclaw')];
     if (!allowedPrefixes.some(prefix => safePath.startsWith(prefix))) {
       return json(res, 403, { error: 'forbidden_path' });
     }
@@ -924,9 +924,9 @@ function handleListSessions(req, res, config) {
 }
 
 // ---------------------------------------------------------------------------
-// YellyRock PRG pattern
+// YellyClaw PRG pattern
 // ---------------------------------------------------------------------------
-function handleYellyRock(req, res, config) {
+function handleYellyClaw(req, res, config) {
   const { PENDING_TTL_MS = 10 * 60 * 1000 } = config;
   const url = new URL(req.url, `http://localhost`);
   const initialPrompt = url.searchParams.get('initialPrompt');
@@ -944,7 +944,7 @@ function handleYellyRock(req, res, config) {
       createdAt: Date.now(),
       claimed: false,
     });
-    res.writeHead(302, { Location: `/yellyrock?sessionId=${token}` });
+    res.writeHead(302, { Location: `/yellyclaw?sessionId=${token}` });
     res.end();
     return;
   }
@@ -1030,7 +1030,7 @@ function createRouter(config) {
       res.writeHead(204, {
         'Access-Control-Allow-Origin': req.headers['origin'] || '*',
         'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, X-YellyRock-Token',
+        'Access-Control-Allow-Headers': 'Content-Type, X-YellyClaw-Token',
         'Access-Control-Max-Age': '86400',
       });
       res.end();
@@ -1049,9 +1049,9 @@ function createRouter(config) {
       return;
     }
 
-    // GET /yellyrock
-    if (pathname === '/yellyrock' && method === 'GET') {
-      return handleYellyRock(req, res, config);
+    // GET /yellyclaw
+    if (pathname === '/yellyclaw' && method === 'GET') {
+      return handleYellyClaw(req, res, config);
     }
 
     // GET /health

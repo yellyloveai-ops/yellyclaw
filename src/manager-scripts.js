@@ -14,11 +14,11 @@ async function quickAddSchedule() {
     var token = _ycToken;
     if (!token) { var _td = await (await fetch('/token')).json(); token = _ycToken = _td.token; }
 
-    var prompt = 'You are a schedule-creation assistant for YellyClaw.\\nThe user wants: \\'' + text.replace(/'/g, "\\'") + '\\'\\n\\nRun this curl to create the schedule:\\n  curl -s -X POST http://localhost:2026/schedules \\\\\\n    -H \\'Content-Type: application/json\\' \\\\\\n    -H \\'X-YellyRock-Token: ' + token + '\\' \\\\\\n    -d \\'{\\\"name\\\": \\\"<short name>\\\", \\\"prompt\\\": \\\"<agent prompt>\\\", \\\"interval\\\": \\\"<1h|6h|12h|1d|1w|once>\\\", \\\"nextRunAt\\\": \\\"<ISO datetime or empty>\\\", \\\"autoPause\\\": true}\\'\\n\\nField rules:\\n- interval: map natural language (daily=1d, hourly=1h, weekly=1w, once=once, etc)\\n- nextRunAt: ISO datetime from time hint in the message, or null for now+interval\\n- name: max 40 chars, descriptive\\n- prompt: what the agent should actually do\\n\\nCall the REST API now.';
+    var prompt = 'You are a schedule-creation assistant for YellyClaw.\\nThe user wants: \\'' + text.replace(/'/g, "\\'") + '\\'\\n\\nRun this curl to create the schedule:\\n  curl -s -X POST http://localhost:2026/schedules \\\\\\n    -H \\'Content-Type: application/json\\' \\\\\\n    -H \\'X-YellyClaw-Token: ' + token + '\\' \\\\\\n    -d \\'{\\\"name\\\": \\\"<short name>\\\", \\\"prompt\\\": \\\"<agent prompt>\\\", \\\"interval\\\": \\\"<1h|6h|12h|1d|1w|once>\\\", \\\"nextRunAt\\\": \\\"<ISO datetime or empty>\\\", \\\"autoPause\\\": true}\\'\\n\\nField rules:\\n- interval: map natural language (daily=1d, hourly=1h, weekly=1w, once=once, etc)\\n- nextRunAt: ISO datetime from time hint in the message, or null for now+interval\\n- name: max 40 chars, descriptive\\n- prompt: what the agent should actually do\\n\\nCall the REST API now.';
 
     var runRes = await fetch('/run', {
       method: 'POST',
-      headers: {'Content-Type': 'application/json', 'X-YellyRock-Token': token},
+      headers: {'Content-Type': 'application/json', 'X-YellyClaw-Token': token},
       body: JSON.stringify({prompt: prompt, allowTools: ['Bash']})
     });
     var runData = await runRes.json();

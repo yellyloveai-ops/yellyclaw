@@ -12,9 +12,9 @@ const { execSync } = require('child_process');
 // ---------------------------------------------------------------------------
 const DEFAULT_PORT = 2026;
 const DEFAULT_CLAUDE_BIN = 'claude-code';
-const DEFAULT_SESSION_DIR = process.env.YELLYCLAW_SESSION_DIR || '/tmp/yellyrock/sessions';
+const DEFAULT_SESSION_DIR = process.env.YELLYCLAW_SESSION_DIR || '/tmp/yellyclaw/sessions';
 const DEFAULT_SESSION_TTL_DAYS = parseInt(process.env.YELLYCLAW_SESSION_TTL_DAYS || '7', 10);
-const DEFAULT_SCHEDULE_FILE = path.join(os.homedir(), '.yellyrock', 'schedules.yaml');
+const DEFAULT_SCHEDULE_FILE = path.join(os.homedir(), '.yellyclaw', 'schedules.yaml');
 const PENDING_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
 // ---------------------------------------------------------------------------
@@ -26,7 +26,7 @@ let CLAUDE_BIN = DEFAULT_CLAUDE_BIN;
 let SESSION_DIR = DEFAULT_SESSION_DIR;
 let SESSION_TTL_DAYS = DEFAULT_SESSION_TTL_DAYS;
 let SCHEDULE_FILE = DEFAULT_SCHEDULE_FILE;
-let SCHEDULE_REPO = process.env.YELLYCLAW_SCHEDULE_REPO || path.join(os.homedir(), '.yellyrock', 'schedules-repo');
+let SCHEDULE_REPO = process.env.YELLYCLAW_SCHEDULE_REPO || path.join(os.homedir(), '.yellyclaw', 'schedules-repo');
 let ALIAS = process.env.YELLYCLAW_ALIAS || os.userInfo().username;
 let INTERACTIVE = false;
 
@@ -95,7 +95,7 @@ function validateSecurity(req, res) {
     // Add CORS headers for allowed origins
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-YellyRock-Token');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-YellyClaw-Token');
   }
 
   // Rate limit: 100 req/min per origin
@@ -115,7 +115,7 @@ function validateSecurity(req, res) {
 
   // CSRF check for state-changing methods
   if (req.method === 'POST' || req.method === 'DELETE' || req.method === 'PUT' || req.method === 'PATCH') {
-    const token = req.headers['x-yellyrock-token'];
+    const token = req.headers['x-yellyclaw-token'];
     if (!token || token !== CSRF_TOKEN) {
       res.writeHead(403, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'invalid_csrf_token' }));

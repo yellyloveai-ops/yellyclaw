@@ -110,7 +110,7 @@ function retrySession(id) {
   fetch('/token').then(r=>r.json()).then(function(d) {
     fetch('/sessions/' + id + '/rerun', {
       method: 'POST',
-      headers: {'Content-Type':'application/json','X-YellyRock-Token':d.token},
+      headers: {'Content-Type':'application/json','X-YellyClaw-Token':d.token},
       body: JSON.stringify({})
     }).then(r=>r.json()).then(function(result) {
       if (result.newSessionId) window.open('/sessions/' + result.newSessionId + '/logs', '_blank');
@@ -268,7 +268,7 @@ function shareSession() {
   if (!_sid || !_token) return;
   fetch('/sessions/' + _sid + '/share', {
     method: 'POST',
-    headers: {'Content-Type':'application/json', 'X-YellyRock-Token': _token},
+    headers: {'Content-Type':'application/json', 'X-YellyClaw-Token': _token},
     body: JSON.stringify({})
   }).then(r=>r.json()).then(function(d) {
     if (d.url) {

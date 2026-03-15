@@ -1,6 +1,6 @@
 'use strict';
 
-// v2/settings.js — YellyRock browser extension configuration
+// v2/settings.js — YellyClaw browser extension configuration
 // Includes yellyclawUrl for connecting to the local YellyClaw server
 
 module.exports = {
@@ -8,22 +8,22 @@ module.exports = {
   yellyclawUrl: process.env.YELLYCLAW_URL || 'http://localhost:2026',
 
   // Default agent spec used for sessions
-  defaultAgentSpec: process.env.YELLYCLAW_AGENT_SPEC || 'yellyrock-default',
+  defaultAgentSpec: process.env.YELLYCLAW_AGENT_SPEC || 'yellyclaw-default',
 
   // CSRF token header name
-  csrfHeader: 'X-YellyRock-Token',
+  csrfHeader: 'X-YellyClaw-Token',
 
   // Session storage root
-  sessionDir: process.env.YELLYCLAW_SESSION_DIR || '/tmp/yellyrock/sessions',
+  sessionDir: process.env.YELLYCLAW_SESSION_DIR || '/tmp/yellyclaw/sessions',
 
   // Session file TTL in days
   sessionTtlDays: parseInt(process.env.YELLYCLAW_SESSION_TTL_DAYS || '7', 10),
 
   // Schedule file path
-  scheduleFile: process.env.YELLYCLAW_SCHEDULE_FILE || require('path').join(require('os').homedir(), '.yellyrock', 'schedules.yaml'),
+  scheduleFile: process.env.YELLYCLAW_SCHEDULE_FILE || require('path').join(require('os').homedir(), '.yellyclaw', 'schedules.yaml'),
 
   // Schedule git repo for remote sync
-  scheduleRepo: process.env.YELLYCLAW_SCHEDULE_REPO || require('path').join(require('os').homedir(), '.yellyrock', 'schedules-repo'),
+  scheduleRepo: process.env.YELLYCLAW_SCHEDULE_REPO || require('path').join(require('os').homedir(), '.yellyclaw', 'schedules-repo'),
 
   // User alias for schedule file naming
   alias: process.env.YELLYCLAW_ALIAS || require('os').userInfo().username,

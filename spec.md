@@ -14,13 +14,13 @@ YellyClaw is a standalone Node.js HTTP server (default port **2026**) that wraps
 
 
 - A **web UI** (Server Manager) for launching, monitoring, and scheduling agent sessions
-- A **REST API** consumed by the YellyRock browser extension to run skills locally
+- A **REST API** consumed by the YellyClaw browser extension to run skills locally
 - A **scheduler** for recurring or one-time agent tasks
 - **Self-spawn** support so a running agent can create child sessions
 - A **self-evolution** ("Evolve Me") flow where the AI improves YellyClaw's own source code
 
 
-The server is intentionally simple: no database, no auth beyond a per-process CSRF token, sessions stored as flat files under `/tmp/yellyrock/sessions/`.
+The server is intentionally simple: no database, no auth beyond a per-process CSRF token, sessions stored as flat files under `/tmp/yellyclaw/sessions/`.
 
 
 ---
@@ -43,30 +43,30 @@ client.js          → Re-exports (thin shim for browser extension integration)
 
 
 ```
-Browser / YellyRock extension
+Browser / YellyClaw extension
  → POST /run  (prompt + options)
  → server.js validates CORS + CSRF + rate limit
  → routes.js: runClaudeCode(prompt, ...) spawns child process
  → session registered → YELLYCLAW_SESSION_ID back-filled into child env
- → stdout/stderr streamed to /tmp/yellyrock/sessions/<date>/<id>/logs.txt
+ → stdout/stderr streamed to /tmp/yellyclaw/sessions/<date>/<id>/logs.txt
  → GET /sessions/:id/logs streams output to browser
 ```
 
 
-### PRG (Post-Redirect-Get) pattern for `/yellyrock`
+### PRG (Post-Redirect-Get) pattern for `/yellyclaw`
 
 
-Used when YellyRock extension opens a session via browser:
+Used when YellyClaw extension opens a session via browser:
 
 
 ```
-1. GET /yellyrock?initialPrompt=<text>&agentSpec=<name>&agentRepo=<repo>
+1. GET /yellyclaw?initialPrompt=<text>&agentSpec=<name>&agentRepo=<repo>
   → server generates short token (timestamp36 + random6)
   → stores in pendingTokens Map: { prompt, agentSpec, agentRepo, createdAt, claimed:false }
-  → 302 redirect to /yellyrock?sessionId=<token>
+  → 302 redirect to /yellyclaw?sessionId=<token>
 
 
-2. GET /yellyrock?sessionId=<token>
+2. GET /yellyclaw?sessionId=<token>
   → claimToken(token): marks claimed=true, returns entry (or null if expired/missing)
   → if already claimed: show "Session In Progress" page
   → if token expired (>10 min): 410 Gone
@@ -75,7 +75,7 @@ Used when YellyRock extension opens a session via browser:
     → browser polls /sessions/:id/logs every 2000ms
 
 
-3. GET /yellyrock?sessionId=<numericId>  (revisit after session completes)
+3. GET /yellyclaw?sessionId=<numericId>  (revisit after session completes)
   → tokenToSessionId.get(token) → numeric id
   → serve unifiedSessionPage for active or history entry
 ```
@@ -104,8 +104,8 @@ Token TTL: 10 minutes (`PENDING_TTL_MS = 10 * 60 * 1000`). Tokens are never reus
  killed: Boolean,
  scheduleId: String,   // null if not from a schedule
  parentId: Number,     // null if not spawned
- agentSpec: String,    // agent spec name, e.g. 'yellyrock-default'
- workDir: String,      // /tmp/yellyrock/sessions/YYYY-MM-DD/session-<id>/
+ agentSpec: String,    // agent spec name, e.g. 'yellyclaw-default'
+ workDir: String,      // /tmp/yellyclaw/sessions/YYYY-MM-DD/session-<id>/
 }
 ```
 
@@ -176,7 +176,7 @@ v2/
 
 
 ```
-/tmp/yellyrock/sessions/
+/tmp/yellyclaw/sessions/
  YYYY-MM-DD/
    session-<id>/
      meta.yaml        → id, startedAt, endedAt, durationSeconds, exitCode, killed,
@@ -200,7 +200,7 @@ v2/
 ### Schedule storage
 
 
-Schedules are persisted to `~/.yellyrock/schedules.yaml` (local, always written on every mutation). An optional git-backed remote file at `<SCHEDULE_REPO>/schedules/<ALIAS>.yaml` is synced on startup (pull) and graceful shutdown (push). On first startup with no local file, remote is pulled and merged.
+Schedules are persisted to `~/.yellyclaw/schedules.yaml` (local, always written on every mutation). An optional git-backed remote file at `<SCHEDULE_REPO>/schedules/<ALIAS>.yaml` is synced on startup (pull) and graceful shutdown (push). On first startup with no local file, remote is pulled and merged.
 
 
 **YAML format** (one block per schedule, separated by `- `):
@@ -209,7 +209,7 @@ Schedules are persisted to `~/.yellyrock/schedules.yaml` (local, always written 
  name: Check GitHub issues daily
  prompt: |
    Review my open GitHub issues and summarize action items.
- agentSpec: yellyrock-default
+ agentSpec: yellyclaw-default
  interval: 1d
  enabled: true
  createdAt: 2026-03-01T09:00:00.000Z
@@ -247,7 +247,7 @@ Persisted keys: `id, name, prompt, agentSpec, interval, enabled, createdAt, next
 | `loadSessionsFromDisk()` | Populate `sessionHistory` with lazy entries on startup |
 | `loadSessionOutput(hist)` | Lazy-load prompt.txt + logs.txt on demand |
 | `loadSchedules()` | Load local YAML; optionally pull from git remote |
-| `saveSchedulesToLocal()` | Write `~/.yellyrock/schedules.yaml` |
+| `saveSchedulesToLocal()` | Write `~/.yellyclaw/schedules.yaml` |
 | `syncSchedulesToGit()` | git pull + write + git push on graceful shutdown |
 | *(inlined)* `moveToHistory(session)` | Remove from active, push to `sessionHistory` (max 50) — inlined in `registerSession` close handler |
 | *(inlined)* `generateCsrfToken()` | `crypto.randomBytes(32).toString('hex')` — called once at startup |
@@ -331,7 +331,7 @@ Persisted keys: `id, name, prompt, agentSpec, interval, enabled, createdAt, next
 
 | Route | Method | Auth | Purpose |
 |---|---|---|---|
-| `/` or `/yellyrock` | GET | — | Server Manager UI |
+| `/` or `/yellyclaw` | GET | — | Server Manager UI |
 | `/run` | POST | CSRF | Execute prompt, return `{sessionId}` |
 | `/health` | GET | — | `{status:'ok', sessions:N}` |
 | `/token` | GET | — | Fetch CSRF token for browser JS |
@@ -363,8 +363,8 @@ Persisted keys: `id, name, prompt, agentSpec, interval, enabled, createdAt, next
 ## [Security Model]
 
 
-- **CORS**: Allowed origins loaded from YellyRock `@match` patterns at startup
-- **CSRF**: Single per-process token in `X-YellyRock-Token` header; required for all POST/DELETE
+- **CORS**: Allowed origins loaded from YellyClaw `@match` patterns at startup
+- **CSRF**: Single per-process token in `X-YellyClaw-Token` header; required for all POST/DELETE
 - **Rate limit**: 100 requests/minute per origin (in-memory counter, reset every 60s)
 - **Host validation**: Only `localhost` / `127.0.0.1` accepted
 - **Tool preapproval**: `v2/preapproval-rules.json` maps URL patterns + prompt keywords → allowed tools; never use `--dangerously-skip-permissions`
@@ -383,7 +383,7 @@ A running session can create child sessions:
 ```bash
 curl -s -X POST \
  -H "Content-Type: application/json" \
- -H "X-YellyRock-Token: $YELLYCLAW_TOKEN" \
+ -H "X-YellyClaw-Token: $YELLYCLAW_TOKEN" \
  -d '{"prompt":"Do subtask X"}' \
  "http://localhost:$YELLYCLAW_PORT/sessions/$YELLYCLAW_SESSION_ID/spawn"
 # → {"sessionId":42,"parentId":7,"logsUrl":"/sessions/42/logs"}
@@ -455,7 +455,7 @@ claude -p [--dangerously-skip-permissions | --allowedTools <list>] [--agent <nam
 | `-p` | always | print/non-interactive mode; suppresses tool approval prompts |
 | `--allowedTools <list>` | default | comma-joined list of pre-approved tools |
 | `--dangerously-skip-permissions` | `allowTools` includes `'*'` | bypasses all approval — use with caution |
-| `--agent <name>` | `agentSpec` set | e.g. `yellyrock-default` |
+| `--agent <name>` | `agentSpec` set | e.g. `yellyclaw-default` |
 | `-- <prompt>` | always | end-of-flags separator followed by prompt text |
 
 
@@ -484,7 +484,7 @@ If `scheduleTools` contains `'*'` → use `--dangerously-skip-permissions` inste
 ```js
 spawn(CLAUDE_BIN, args, {
  shell: false,           // never use shell: true (injection risk)
- cwd: sessionWorkDir,    // isolated per-session dir under /tmp/yellyrock/sessions/
+ cwd: sessionWorkDir,    // isolated per-session dir under /tmp/yellyclaw/sessions/
  env: {
    ...process.env,
    YELLYCLAW_SESSION_ID: '<back-filled after registerSession>',
@@ -512,7 +512,7 @@ proc.on('close', code => res.end(`\n[done] exit code: ${code}`))
 - `registerSession()` in `server.js` also tees output to in-memory buffer + `logs.txt`
 
 
-**Mode B: HTML polling (`asHtml=true`)** — used by GET /yellyrock (browser entry)
+**Mode B: HTML polling (`asHtml=true`)** — used by GET /yellyclaw (browser entry)
 ```
 1. res.end(streamingSessionPage(...))   // send HTML immediately, close response
 2. proc output → registerSession tee → in-memory buffer + logs.txt
@@ -543,7 +543,7 @@ User types: "check my GitHub issues every day at 9am"
       The user wants: '<text>'
       Run this curl to create the schedule:
         curl -X POST http://localhost:2026/schedules
-          -H 'X-YellyRock-Token: <token>'
+          -H 'X-YellyClaw-Token: <token>'
           -d '{name, prompt, interval, nextRunAt, autoPause:true}'
       Field rules: interval mapping, nextRunAt from user's time hint, ..."
  → POST /run {prompt, allowTools:['shell']}  ← shell needed for curl
@@ -741,7 +741,7 @@ Uses the same minimal harness pattern as `kiro-runtime-server.test.js` (no Jest/
 |---|------|--------|------|-------|----------|
 | 1.1 | Valid host accepted | GET | `/health` | host: `localhost:2026` | 200 `{status:'ok'}` |
 | 1.2 | Invalid host rejected | GET | `/health` | host: `evil.com` | 403 |
-| 1.3 | POST without CSRF token | POST | `/run` | no `X-YellyRock-Token` | 403 |
+| 1.3 | POST without CSRF token | POST | `/run` | no `X-YellyClaw-Token` | 403 |
 | 1.4 | POST with wrong CSRF token | POST | `/run` | wrong token | 403 |
 | 1.5 | POST with valid CSRF token | POST | `/run` | correct token, missing prompt | 400 (not 403) |
 | 1.6 | Disallowed origin rejected | GET | `/health` | `Origin: https://evil.com` | 403 |
@@ -760,7 +760,7 @@ Uses the same minimal harness pattern as `kiro-runtime-server.test.js` (no Jest/
 | 2.1 | POST /run creates session | POST `/run` `{prompt:"echo hello"}` | 200 `{sessionId:N}` |
 | 2.2 | Active session appears in list | GET `/sessions` after 2.1 | `sessions` array contains `{id:N, source:'browser'}` |
 | 2.3 | Session logs endpoint exists | GET `/sessions/N/logs` (JSON) | 200, `{id:N, prompt:'echo hello'}` |
-| 2.4 | Session log file written to disk | Check `/tmp/yellyrock/sessions/YYYY-MM-DD/session-N/logs.txt` | File exists, non-empty after process exits |
+| 2.4 | Session log file written to disk | Check `/tmp/yellyclaw/sessions/YYYY-MM-DD/session-N/logs.txt` | File exists, non-empty after process exits |
 | 2.5 | Session moves to history on exit | GET `/history` after process exits | `history` contains `{id:N, exitCode:0}` |
 | 2.6 | Kill active session | POST `/sessions/N/kill` | 200 `{killed:true}`; session `killed:true` in history |
 | 2.7 | Kill non-existent session | POST `/sessions/9999/kill` | 404 |
@@ -1024,7 +1024,7 @@ Client should poll `GET /health` after receiving `restarting:true` to detect whe
 ```
 spawn(CLAUDE_BIN, ['agent', 'list'], { shell: false })
 stdout lines matching /^\s*[-•*]/ → strip bullet → { name: string }[]
-→ 200 { agents: [{name:'yellyrock-default'}, ...] }
+→ 200 { agents: [{name:'yellyclaw-default'}, ...] }
 on error/non-zero exit → 500 { error, stderr, agents:[] }
 ```
 
@@ -1038,8 +1038,8 @@ Used by schedule modal for agent typeahead. `installAgentIfAbsent(agentName)` ch
 ## [/open-folder Route]
 
 
-`POST /open-folder` `{path: "/tmp/yellyrock/sessions/..."}`:
-- Path restricted to subdirectories of `/tmp/yellyrock` (path traversal guard)
+`POST /open-folder` `{path: "/tmp/yellyclaw/sessions/..."}`:
+- Path restricted to subdirectories of `/tmp/yellyclaw` (path traversal guard)
 - macOS: `execSync('open "<safePath>"')`; Linux: `xdg-open`
 - Returns `{ opened: safePath }`
 
@@ -1058,10 +1058,10 @@ node src/server.js [options]
 --claude <path>          Path to claude-code binary (default: claude-code)
 --interactive            Enable interactive mode (default: non-interactive)
 --repo <path>            Git repo for remote schedule sync
-                        (default: ~/.yellyrock/schedules-repo)
+                        (default: ~/.yellyclaw/schedules-repo)
 --alias <string>         User alias for schedule file naming
                         (default: $YELLYCLAW_ALIAS or os.userInfo().username)
---session-dir <path>     Session storage root (default: /tmp/yellyrock/sessions)
+--session-dir <path>     Session storage root (default: /tmp/yellyclaw/sessions)
 --session-ttl-days <n>   Session file TTL in days (default: 7)
 --allow-tools <list>     Comma-separated extra tools to pre-approve (future; passed as --allowedTools to claude)
 ```
@@ -1080,7 +1080,7 @@ Environment variable overrides: `YELLYCLAW_ALIAS`, `YELLYCLAW_SCHEDULE_REPO`, `Y
 ```
 1. Parse CLI flags → build config
 2. generateCsrfToken() → random 32-byte hex
-3. Parse allowed origin patterns from yellyrock.user.js → ALLOWED_DOMAIN_PATTERNS
+3. Parse allowed origin patterns from yellyclaw.user.js → ALLOWED_DOMAIN_PATTERNS
   (fallback hardcoded list if file not found)
 4. Load preapproval-rules.json
 5. http.createServer(createRouter(config)).listen(PORT, '127.0.0.1')
@@ -1089,7 +1089,7 @@ Environment variable overrides: `YELLYCLAW_ALIAS`, `YELLYCLAW_SCHEDULE_REPO`, `Y
   - Populate sessionHistory with lazy entries (prompt/output = null, diskDir set)
   - Advance sessionCounter past highest loaded id
 7. loadSchedules():
-  - Load ~/.yellyrock/schedules.yaml (local)
+  - Load ~/.yellyclaw/schedules.yaml (local)
   - If no local file + SCHEDULE_REPO exists: git pull + load remote, save to local
 8. Start schedule tick (setInterval 30s)
 9. Start idle/TTL cleanup tick (setInterval 60s)

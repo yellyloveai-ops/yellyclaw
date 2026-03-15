@@ -117,7 +117,7 @@ ${renderFeedbackPanel()}
       </div>
       <div class="form-group">
         <label>Agent</label>
-        <input id="schedAgent" type="text" list="agentsList" placeholder="yellyrock-default">
+        <input id="schedAgent" type="text" list="agentsList" placeholder="yellyclaw-default">
         <datalist id="agentsList"></datalist>
       </div>
     </div>
