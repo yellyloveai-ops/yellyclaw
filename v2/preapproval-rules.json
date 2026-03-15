@@ -1,0 +1,61 @@
+{
+  "version": 2,
+  "description": "Tool preapproval rules: URL patterns + prompt keywords → allowed tools. Never use --trust-all-tools unless explicitly requested.",
+  "rules": [
+    {
+      "id": "github",
+      "description": "GitHub-related prompts get web_search + browser",
+      "urlPattern": "github\\.com",
+      "keywords": ["github", "issues", "pull", "pr", "repo", "commit", "branch"],
+      "tools": ["web_search", "browser"]
+    },
+    {
+      "id": "gitlab",
+      "description": "GitLab-related prompts",
+      "urlPattern": "gitlab\\.com",
+      "keywords": ["gitlab", "merge", "pipeline", "ci"],
+      "tools": ["web_search", "browser"]
+    },
+    {
+      "id": "web-search",
+      "description": "Search/lookup prompts",
+      "urlPattern": null,
+      "keywords": ["search", "find", "lookup", "google", "research", "browse", "web"],
+      "tools": ["web_search", "browser"]
+    },
+    {
+      "id": "file-ops",
+      "description": "File operation prompts",
+      "urlPattern": null,
+      "keywords": ["file", "read", "write", "create", "edit", "directory", "folder", "path"],
+      "tools": ["Read", "Write"]
+    },
+    {
+      "id": "shell-ops",
+      "description": "Shell/terminal prompts",
+      "urlPattern": null,
+      "keywords": ["run", "execute", "shell", "bash", "script", "command", "terminal", "install", "npm", "pip", "brew"],
+      "tools": ["Bash"]
+    },
+    {
+      "id": "code",
+      "description": "Code-related prompts get file access",
+      "urlPattern": null,
+      "keywords": ["code", "implement", "fix", "bug", "test", "refactor", "function", "class", "module"],
+      "tools": ["Read", "Write", "Bash"]
+    },
+    {
+      "id": "summarize",
+      "description": "Summarize/review prompts",
+      "urlPattern": null,
+      "keywords": ["summarize", "review", "analyze", "report", "check", "audit"],
+      "tools": ["Read", "web_search"]
+    }
+  ],
+  "baseTools": ["Bash", "Read", "Write"],
+  "notes": [
+    "baseTools are always included regardless of matching rules",
+    "If allowTools contains '*', use --trust-all-tools instead of --trust-tools",
+    "Never use --trust-all-tools by default — only when explicitly configured"
+  ]
+}

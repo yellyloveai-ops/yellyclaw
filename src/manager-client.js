@@ -15,6 +15,7 @@ var _lastSchedData = null;
 var _lastSessionData = null;
 var _filterScheduleId = null;
 var _filterScheduleName = null;
+var _filterDate = null;
 var _editingScheduleId = null;
 var _scheduleType = 'repeated';
 var _selectedSchedules = new Set();
@@ -137,7 +138,7 @@ function loadSchedules() {
     _lastSchedData = newData;
     _schedules = d.schedules || [];
     renderScheduleTable();
-    if (_schedViewMode === 'cal') renderScheduleCalendar();
+    scheduleCalendarRender();
     document.getElementById('scheduleCount').textContent = _schedules.length + ' total';
   }).catch(function(){});
 }
@@ -201,6 +202,9 @@ function renderScheduleTable() {
 }
 
 var _schedViewMode = 'list';
+var _calWeekOffset = 0;
+var _calExpandedDays = new Set();
+var _calRenderTimer = null;
 function setScheduleView(mode) {
   _schedViewMode = mode;
   document.getElementById('mainArea').style.display = mode === 'list' ? '' : 'none';
@@ -210,17 +214,29 @@ function setScheduleView(mode) {
   if (mode === 'cal') renderScheduleCalendar();
 }
 
+function scheduleCalendarRender() {
+  if (_schedViewMode !== 'cal') return;
+  clearTimeout(_calRenderTimer);
+  _calRenderTimer = setTimeout(renderScheduleCalendar, 50);
+}
+
 function renderScheduleCalendar() {
   var container = document.getElementById('scheduleCalendarView');
   var now = Date.now();
   var today = new Date(); today.setHours(0,0,0,0); var todayTs = today.getTime();
 
-  // Anchor: Sunday 5 weeks ago → 10 weeks total (past 5 left, future 5 right)
-  var anchor = new Date(today);
-  anchor.setDate(today.getDate() - today.getDay() - 35);
+  // Anchor: Sunday (shifted by _calWeekOffset weeks) → 10 weeks total
+  // Use Date(y,m,d) constructor for DST-safe local midnight
+  var anchor = new Date(today.getFullYear(), today.getMonth(), today.getDate() - today.getDay() - 35 + (_calWeekOffset * 7));
   var windowStart = anchor.getTime();
   var totalDays = 70;
-  var windowEnd = windowStart + totalDays * 86400000;
+
+  // Helper: get local midnight timestamp for any epoch time (DST-safe)
+  function calDay(ts) {
+    var d = new Date(ts);
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  }
+  var windowEnd = calDay(windowStart + totalDays * 86400000 + 86400000); // safely past last cell
 
   // Day buckets: { past: [sessions], future: [schedule occurrences] }
   var days = [];
@@ -229,22 +245,26 @@ function renderScheduleCalendar() {
   // Past: real session runs in window (schedule-sourced only)
   var allSessions = _histSessions.concat(_activeSessions);
   allSessions.forEach(function(sess) {
-    if (sess.source !== 'schedule' && !sess.scheduleId) return;
+    if (!sess.scheduleId) return;
     var t = sess.startedAt;
-    if (!t || t < windowStart || t >= windowEnd) return;
-    var dayIdx = Math.floor((t - windowStart) / 86400000);
-    days[dayIdx].past.push(sess);
+    if (!t) return;
+    var dm = calDay(t);
+    if (dm < windowStart || dm >= windowEnd) return;
+    var dayIdx = Math.round((dm - windowStart) / 86400000);
+    if (dayIdx >= 0 && dayIdx < totalDays) days[dayIdx].past.push(sess);
   });
 
-  // Future: projected schedule runs from today onwards
+  // Future: projected schedule runs (capped at 2000 iterations per schedule)
   _schedules.forEach(function(s) {
     if (!s.nextRunAt) return;
     var t = s.nextRunAt;
     var iv = s.intervalMs || 0;
     if (iv > 0) { while (t < now) t += iv; }
-    while (t < windowEnd) {
-      if (t >= todayTs) {
-        var dayIdx = Math.floor((t - windowStart) / 86400000);
+    var projLimit = 2000;
+    while (t < windowEnd && projLimit-- > 0) {
+      var dm = calDay(t);
+      if (dm >= todayTs) {
+        var dayIdx = Math.round((dm - windowStart) / 86400000);
         if (dayIdx >= 0 && dayIdx < totalDays) days[dayIdx].future.push({ s: s, t: t });
       }
       if (iv <= 0) break;
@@ -252,35 +272,65 @@ function renderScheduleCalendar() {
     }
   });
 
+  // Empty state
+  var hasAny = days.some(function(b) { return b.past.length || b.future.length; });
+  if (!hasAny) {
+    container.innerHTML = '<div class="cal5w-empty">No schedule activity in this window. Use ⚡ Quick Add or ➕ Manual to create a schedule.</div>';
+    return;
+  }
+
   var DAY_ABBR = ['Su','Mo','Tu','We','Th','Fr','Sa'];
   var MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   var maxShow = 3;
 
-  var html = '<div class="cal5w-grid">';
+  // Navigation range label
+  var wStart = new Date(windowStart);
+  var wEnd = new Date(windowEnd - 86400000);
+  var rangeLabel = MONTH_NAMES[wStart.getMonth()] + ' ' + wStart.getFullYear();
+  if (wStart.getMonth() !== wEnd.getMonth() || wStart.getFullYear() !== wEnd.getFullYear()) {
+    rangeLabel += ' – ' + MONTH_NAMES[wEnd.getMonth()] + ' ' + wEnd.getFullYear();
+  }
+
+  var html = '<div class="cal5w-nav">'
+    + '<button onclick="_calWeekOffset-=2;_calExpandedDays.clear();renderScheduleCalendar()">◀◀</button>'
+    + '<button onclick="_calWeekOffset--;_calExpandedDays.clear();renderScheduleCalendar()">◀</button>'
+    + '<span class="cal5w-nav-label">' + rangeLabel + '</span>'
+    + '<button onclick="_calWeekOffset++;_calExpandedDays.clear();renderScheduleCalendar()">▶</button>'
+    + '<button onclick="_calWeekOffset+=2;_calExpandedDays.clear();renderScheduleCalendar()">▶▶</button>'
+    + '<button class="cal5w-today-btn" onclick="_calWeekOffset=0;_calExpandedDays.clear();renderScheduleCalendar()">Today</button>'
+    + '</div>';
+
+  html += '<div class="cal5w-grid">';
   for (var col = 0; col < 7; col++) {
     html += '<div class="cal5w-dow">' + DAY_ABBR[col] + '</div>';
   }
   for (var d = 0; d < totalDays; d++) {
-    var dayTs = windowStart + d * 86400000;
-    var dayDate = new Date(dayTs);
+    // DST-safe: compute each cell date via local date arithmetic
+    var dayDate = new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate() + d);
+    var dayTs = dayDate.getTime();
     var isToday = dayTs === todayTs;
     var isPast = dayTs < todayTs;
     html += '<div class="cal5w-cell' + (isToday ? ' today' : '') + (isPast ? ' past' : '') + '">';
-    html += '<div class="cal5w-date">' + dayDate.getDate()
-      + (dayDate.getDate() === 1 ? ' <span class="cal5w-month">' + MONTH_NAMES[dayDate.getMonth()] + '</span>' : '')
-      + '</div>';
-
     var bucket = days[d];
+    var dateContent = dayDate.getDate()
+      + (dayDate.getDate() === 1 ? ' <span class="cal5w-month">' + MONTH_NAMES[dayDate.getMonth()] + '</span>' : '');
+    if ((isPast || isToday) && bucket.past.length > 0) {
+      html += '<div class="cal5w-date cal5w-date-link" onclick="showFilteredByDate(' + dayTs + ')" title="View all ' + bucket.past.length + ' sessions on this day">' + dateContent + '</div>';
+    } else {
+      html += '<div class="cal5w-date">' + dateContent + '</div>';
+    }
     var allChips = bucket.past.map(function(sess) { return { type: 'past', sess: sess }; })
       .concat(bucket.future.map(function(e) { return { type: 'future', entry: e }; }));
 
-    allChips.slice(0, maxShow).forEach(function(chip) {
+    var expanded = _calExpandedDays.has(d);
+    var chips = expanded ? allChips : allChips.slice(0, maxShow);
+    chips.forEach(function(chip) {
       if (chip.type === 'past') {
         var sess = chip.sess;
         var icon = sess.killed ? '🔪' : sess.exitCode === 0 ? '✅' : sess.exitCode != null ? '❌' : '🔄';
         var sched = _schedules.find(function(x){ return x.id === sess.scheduleId; });
         var label = sched ? sched.name : (sess.prompt || sess.title || '#' + sess.id).slice(0, 40);
-        html += '<span class="cal-chip chip-past" onclick="openSessionTab(' + sess.id + ')" title="' + escHtmlJs(label) + '">'
+        html += '<span class="cal-chip chip-past" onclick="openSessionTab(' + sess.id + ')" title="📄 View logs · ' + escHtmlJs(label) + '">'
           + icon + ' ' + escHtmlJs(label) + '</span>';
       } else {
         var s = chip.entry.s; var t = chip.entry.t;
@@ -291,17 +341,23 @@ function renderScheduleCalendar() {
         if (!s.enabled) chipClass += ' chip-disabled';
         else if (s.currentRunSessionId) chipClass += ' chip-running';
         else if (s.lastRunFailed) chipClass += ' chip-failed';
-        html += '<span class="' + chipClass + '" onclick="openScheduleModal(\\'' + escHtmlJs(s.id) + '\\')" title="' + escHtmlJs(s.name) + '">'
+        html += '<span class="' + chipClass + '" onclick="openScheduleModal(\\'' + escHtmlJs(s.id) + '\\')" title="✏️ Edit schedule · ' + escHtmlJs(s.name) + '">'
           + '<span class="cal-chip-time">' + hh + ':' + mm + '</span>' + escHtmlJs(s.name) + '</span>';
       }
     });
-    if (allChips.length > maxShow) {
-      html += '<span class="cal5w-more">+' + (allChips.length - maxShow) + ' more</span>';
+    if (!expanded && allChips.length > maxShow) {
+      html += '<span class="cal5w-more cal5w-more-btn" onclick="_calExpandedDays.add(' + d + ');renderScheduleCalendar()">+' + (allChips.length - maxShow) + ' more</span>';
+    } else if (expanded && allChips.length > maxShow) {
+      html += '<span class="cal5w-more cal5w-more-btn" onclick="_calExpandedDays.delete(' + d + ');renderScheduleCalendar()">▲ less</span>';
     }
     html += '</div>';
   }
   html += '</div>';
   container.innerHTML = html;
+
+  // Scroll today into view within the calendar container
+  var todayCell = container.querySelector('.cal5w-cell.today');
+  if (todayCell) todayCell.scrollIntoView({ block: 'nearest', inline: 'center' });
 }
 
 function toggleScheduleSelect(id, checked) {
@@ -439,13 +495,6 @@ function openScheduleModal(scheduleId) {
   }
 
   modal.classList.add('open');
-
-  // Auto-fill name from prompt
-  document.getElementById('schedPrompt').addEventListener('input', function() {
-    if (!document.getElementById('schedName').value) {
-      document.getElementById('schedName').value = this.value.slice(0, 40);
-    }
-  });
 }
 
 function setScheduleType(type) {
@@ -527,7 +576,7 @@ function loadSessions() {
     _activeSessions = active;
     _histSessions = hist;
     renderSessionsGrid();
-    if (_schedViewMode === 'cal') renderScheduleCalendar();
+    scheduleCalendarRender();
     document.getElementById('sessionCount').textContent = active.length + ' active, ' + hist.length + ' completed';
   }).catch(function(){});
 }
@@ -540,6 +589,11 @@ function renderSessionsGrid() {
   if (_filterScheduleId) {
     active = active.filter(function(s){ return s.scheduleId === _filterScheduleId; });
     hist = hist.filter(function(s){ return s.scheduleId === _filterScheduleId; });
+  }
+  if (_filterDate) {
+    var fdEnd = _filterDate + 86400000;
+    active = active.filter(function(s){ return s.startedAt >= _filterDate && s.startedAt < fdEnd; });
+    hist = hist.filter(function(s){ return s.startedAt >= _filterDate && s.startedAt < fdEnd; });
   }
 
   var html = '';
@@ -615,9 +669,23 @@ function showFilteredSessions(scheduleId, name) {
   renderSessionsGrid();
 }
 
+function showFilteredByDate(dayTs) {
+  var d = new Date(dayTs);
+  var MN = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var label = MN[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear();
+  _filterScheduleId = null;
+  _filterScheduleName = null;
+  _filterDate = dayTs;
+  document.getElementById('filterLabel').textContent = 'Filtered by: ' + label;
+  document.getElementById('filterBanner').classList.add('visible');
+  setScheduleView('list');
+  renderSessionsGrid();
+}
+
 function clearFilter() {
   _filterScheduleId = null;
   _filterScheduleName = null;
+  _filterDate = null;
   document.getElementById('filterBanner').classList.remove('visible');
   renderSessionsGrid();
 }
@@ -735,6 +803,13 @@ function escHtmlJs(s) {
 
 ${QUICK_ADD_SCHEDULE_SCRIPT}
 ${LOG_TAIL_TOOLTIP_SCRIPT}
+
+// Auto-fill schedule name from prompt — registered once (avoids leak from per-open addEventListener)
+document.getElementById('schedPrompt').addEventListener('input', function() {
+  if (!document.getElementById('schedName').value) {
+    document.getElementById('schedName').value = this.value.slice(0, 40);
+  }
+});
 
 // Auto-refresh
 checkHealth();

@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "yellyclaw",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["src/server.js", "--claude", "/Users/yelly/.local/bin/claude"],
+      "port": 2026
+    }
+  ]
+}

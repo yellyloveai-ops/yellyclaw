@@ -1,0 +1,24 @@
+{
+  "name": "yellyclaw",
+  "version": "1.0.0",
+  "description": "Local AI agent runtime server — wraps claude-code CLI into a managed session runtime",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js --claude /Users/yelly/.local/bin/claude",
+    "test": "node tests/yellyclaw-e2e.test.js",
+    "test:real": "YELLYCLAW_REAL_RUNTIME=1 node tests/yellyclaw-e2e.test.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "ai",
+    "agent",
+    "claude",
+    "scheduler",
+    "runtime",
+    "local"
+  ],
+  "license": "MIT",
+  "dependencies": {}
+}
