@@ -11,7 +11,7 @@ module.exports = {
   defaultAgentSpec: process.env.YELLYCLAW_AGENT_SPEC || 'yellyrock-default',
 
   // CSRF token header name
-  csrfHeader: 'X-AgentRock-Token',
+  csrfHeader: 'X-YellyRock-Token',
 
   // Session storage root
   sessionDir: process.env.YELLYCLAW_SESSION_DIR || '/tmp/yellyrock/sessions',

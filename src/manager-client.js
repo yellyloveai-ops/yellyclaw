@@ -91,7 +91,7 @@ function handleUpdate() {
   if (!confirm('Pull latest code and restart server?')) return;
   fetch('/update', {
     method: 'POST',
-    headers: {'Content-Type':'application/json','X-AgentRock-Token':_ycToken},
+    headers: {'Content-Type':'application/json','X-YellyRock-Token':_ycToken},
     body: JSON.stringify({})
   }).then(r=>r.json()).then(function(d) {
     if (d.restarting) {
@@ -113,7 +113,7 @@ function handleStop() {
   if (!confirm('Stop the YellyClaw server?')) return;
   fetch('/stop', {
     method: 'POST',
-    headers: {'Content-Type':'application/json','X-AgentRock-Token':_ycToken},
+    headers: {'Content-Type':'application/json','X-YellyRock-Token':_ycToken},
     body: JSON.stringify({})
   }).then(function() {
     document.getElementById('serverStatus').textContent = '⏹ Stopped';
@@ -125,7 +125,7 @@ function openFolder(p) {
   if (!p || !_ycToken) return;
   fetch('/open-folder', {
     method: 'POST',
-    headers: {'Content-Type':'application/json','X-AgentRock-Token':_ycToken},
+    headers: {'Content-Type':'application/json','X-YellyRock-Token':_ycToken},
     body: JSON.stringify({path: p})
   });
 }
@@ -392,7 +392,7 @@ function batchDeleteSchedules() {
   if (!confirm('Delete ' + _selectedSchedules.size + ' schedule(s)?')) return;
   fetch('/schedules?action=batch-delete', {
     method: 'POST',
-    headers: {'Content-Type':'application/json','X-AgentRock-Token':_ycToken},
+    headers: {'Content-Type':'application/json','X-YellyRock-Token':_ycToken},
     body: JSON.stringify({ids: [..._selectedSchedules]})
   }).then(r=>r.json()).then(function() {
     clearBatchSelection();
@@ -403,7 +403,7 @@ function batchDeleteSchedules() {
 function runScheduleNow(id) {
   fetch('/schedules/'+id+'/run', {
     method: 'POST',
-    headers: {'Content-Type':'application/json','X-AgentRock-Token':_ycToken},
+    headers: {'Content-Type':'application/json','X-YellyRock-Token':_ycToken},
     body: JSON.stringify({})
   }).then(r=>r.json()).then(function(d) {
     if (d.sessionId) { openSessionTab(d.sessionId); loadSchedules(); loadSessions(); }
@@ -414,7 +414,7 @@ function runScheduleNow(id) {
 function toggleScheduleEnabled(id, enabled) {
   fetch('/schedules/'+id, {
     method: 'POST',
-    headers: {'Content-Type':'application/json','X-AgentRock-Token':_ycToken},
+    headers: {'Content-Type':'application/json','X-YellyRock-Token':_ycToken},
     body: JSON.stringify({enabled: enabled})
   }).then(r=>r.json()).then(function() { loadSchedules(); });
 }
@@ -429,7 +429,7 @@ function confirmDeleteSchedule(id) {
   }
   fetch('/schedules/'+id+'?action=delete', {
     method: 'POST',
-    headers: {'Content-Type':'application/json','X-AgentRock-Token':_ycToken},
+    headers: {'Content-Type':'application/json','X-YellyRock-Token':_ycToken},
     body: JSON.stringify({})
   }).then(r=>r.json()).then(function() { loadSchedules(); });
 }
@@ -437,7 +437,7 @@ function confirmDeleteSchedule(id) {
 function autoFixSchedule(id) {
   fetch('/schedules/'+id+'/run-until-no-error', {
     method: 'POST',
-    headers: {'Content-Type':'application/json','X-AgentRock-Token':_ycToken},
+    headers: {'Content-Type':'application/json','X-YellyRock-Token':_ycToken},
     body: JSON.stringify({})
   }).then(r=>r.json()).then(function(d) {
     alert('Auto-fix loop started. Check sessions for progress.');
@@ -550,7 +550,7 @@ function saveSchedule() {
   var url = _editingScheduleId ? '/schedules/' + _editingScheduleId : '/schedules';
   fetch(url, {
     method: 'POST',
-    headers: {'Content-Type':'application/json','X-AgentRock-Token':_ycToken},
+    headers: {'Content-Type':'application/json','X-YellyRock-Token':_ycToken},
     body: JSON.stringify(body)
   }).then(r=>r.json()).then(function(d) {
     closeScheduleModal();
@@ -656,7 +656,7 @@ function killSession(id) {
   if (!confirm('Kill session #'+id+'?')) return;
   fetch('/sessions/'+id+'/kill', {
     method: 'POST',
-    headers: {'Content-Type':'application/json','X-AgentRock-Token':_ycToken},
+    headers: {'Content-Type':'application/json','X-YellyRock-Token':_ycToken},
     body: JSON.stringify({})
   }).then(r=>r.json()).then(function() { loadSessions(); });
 }
@@ -708,7 +708,7 @@ function submitFeedback() {
   status.textContent = '⏳ Starting…';
   fetch('/feedback', {
     method: 'POST',
-    headers: {'Content-Type':'application/json','X-AgentRock-Token':_ycToken},
+    headers: {'Content-Type':'application/json','X-YellyRock-Token':_ycToken},
     body: JSON.stringify({prompt: text})
   }).then(r=>r.json()).then(function(d) {
     if (d.sessionId) {

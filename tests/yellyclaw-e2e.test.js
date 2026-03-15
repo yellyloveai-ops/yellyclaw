@@ -240,12 +240,12 @@ async function runSuite1() {
     assert(r3.status === 403, '1.3 POST without CSRF token → 403');
 
     // 1.4 POST with wrong CSRF token
-    const r4 = await request({ method: 'POST', path: '/run', headers: { 'Content-Type': 'application/json', 'X-AgentRock-Token': 'wrongtoken123' } }, { prompt: 'test' });
+    const r4 = await request({ method: 'POST', path: '/run', headers: { 'Content-Type': 'application/json', 'X-YellyRock-Token': 'wrongtoken123' } }, { prompt: 'test' });
     assert(r4.status === 403, '1.4 POST with wrong CSRF token → 403');
 
     // 1.5 POST with valid CSRF token but missing prompt → 400
     await fetchToken();
-    const r5 = await request({ method: 'POST', path: '/run', headers: { 'Content-Type': 'application/json', 'X-AgentRock-Token': CSRF_TOKEN } }, {});
+    const r5 = await request({ method: 'POST', path: '/run', headers: { 'Content-Type': 'application/json', 'X-YellyRock-Token': CSRF_TOKEN } }, {});
     assert(r5.status === 400, '1.5 POST with valid CSRF, missing prompt → 400 (not 403)');
 
     // 1.6 Disallowed origin rejected
@@ -275,7 +275,7 @@ async function runSuite2() {
     let sessionId = null;
 
     // 2.1 POST /run creates session
-    const r1 = await post('/run', { prompt: 'echo hello' }, { 'X-AgentRock-Token': CSRF_TOKEN });
+    const r1 = await post('/run', { prompt: 'echo hello' }, { 'X-YellyRock-Token': CSRF_TOKEN });
     assert(r1.status === 200, '2.1 POST /run returns 200');
     assert(r1.body && typeof r1.body.sessionId === 'number', '2.1 POST /run returns {sessionId:N}');
     sessionId = r1.body && r1.body.sessionId;
@@ -320,20 +320,20 @@ async function runSuite2() {
     assert(inHist, '2.5 Session moves to history on exit');
 
     // 2.6 Kill active session
-    const r6run = await post('/run', { prompt: 'sleep 30' }, { 'X-AgentRock-Token': CSRF_TOKEN });
+    const r6run = await post('/run', { prompt: 'sleep 30' }, { 'X-YellyRock-Token': CSRF_TOKEN });
     const killId = r6run.body && r6run.body.sessionId;
     await sleep(300);
-    const r6kill = await post('/sessions/' + killId + '/kill', {}, { 'X-AgentRock-Token': CSRF_TOKEN });
+    const r6kill = await post('/sessions/' + killId + '/kill', {}, { 'X-YellyRock-Token': CSRF_TOKEN });
     assert(r6kill.status === 200, '2.6 Kill returns 200');
     assert(r6kill.body && r6kill.body.killed === true, '2.6 Kill returns {killed:true}');
 
     // 2.7 Kill non-existent session
-    const r7 = await post('/sessions/9999/kill', {}, { 'X-AgentRock-Token': CSRF_TOKEN });
+    const r7 = await post('/sessions/9999/kill', {}, { 'X-YellyRock-Token': CSRF_TOKEN });
     assert(r7.status === 404, '2.7 Kill non-existent session → 404');
 
     // 2.8 Rerun session
     if (sessionId) {
-      const r8 = await post('/sessions/' + sessionId + '/rerun', {}, { 'X-AgentRock-Token': CSRF_TOKEN });
+      const r8 = await post('/sessions/' + sessionId + '/rerun', {}, { 'X-YellyRock-Token': CSRF_TOKEN });
       assert(r8.status === 200, '2.8 Rerun returns 200');
       assert(r8.body && typeof r8.body.newSessionId === 'number', '2.8 Rerun returns {newSessionId:M}');
       // Verify same prompt
@@ -357,13 +357,13 @@ async function runSuite3() {
     await fetchToken();
 
     // Create a parent session
-    const parentRes = await post('/run', { prompt: 'parent session' }, { 'X-AgentRock-Token': CSRF_TOKEN });
+    const parentRes = await post('/run', { prompt: 'parent session' }, { 'X-YellyRock-Token': CSRF_TOKEN });
     assert(parentRes.status === 200, '3.x parent session created');
     const parentId = parentRes.body && parentRes.body.sessionId;
     await sleep(300);
 
     // 3.1 Spawn child session
-    const r1 = await post('/sessions/' + parentId + '/spawn', { prompt: 'subtask' }, { 'X-AgentRock-Token': CSRF_TOKEN });
+    const r1 = await post('/sessions/' + parentId + '/spawn', { prompt: 'subtask' }, { 'X-YellyRock-Token': CSRF_TOKEN });
     assert(r1.status === 201, '3.1 Spawn returns 201');
     assert(r1.body && typeof r1.body.sessionId === 'number', '3.1 Spawn returns {sessionId}');
     assert(r1.body && r1.body.parentId === parentId, '3.1 Spawn returns {parentId}');
@@ -383,7 +383,7 @@ async function runSuite3() {
     // 3.3 Max 5 children enforced
     let last429 = false;
     for (let i = 0; i < 6; i++) {
-      const r = await post('/sessions/' + parentId + '/spawn', { prompt: 'child ' + i }, { 'X-AgentRock-Token': CSRF_TOKEN });
+      const r = await post('/sessions/' + parentId + '/spawn', { prompt: 'child ' + i }, { 'X-YellyRock-Token': CSRF_TOKEN });
       if (r.status === 429 && r.body && r.body.error === 'max_children') {
         last429 = true;
         break;
@@ -392,14 +392,14 @@ async function runSuite3() {
     assert(last429, '3.3 Max 5 children enforced → 429 max_children');
 
     // 3.4 Spawn from non-existent parent
-    const r4 = await post('/sessions/9999/spawn', { prompt: 'orphan' }, { 'X-AgentRock-Token': CSRF_TOKEN });
+    const r4 = await post('/sessions/9999/spawn', { prompt: 'orphan' }, { 'X-YellyRock-Token': CSRF_TOKEN });
     assert(r4.status === 404, '3.4 Spawn from non-existent parent → 404');
 
     // 3.5 Child inherits parent agentSpec
-    const parentWithAgentRes = await post('/run', { prompt: 'agent parent', agentSpec: 'test-agent' }, { 'X-AgentRock-Token': CSRF_TOKEN });
+    const parentWithAgentRes = await post('/run', { prompt: 'agent parent', agentSpec: 'test-agent' }, { 'X-YellyRock-Token': CSRF_TOKEN });
     const agentParentId = parentWithAgentRes.body && parentWithAgentRes.body.sessionId;
     await sleep(200);
-    const childRes = await post('/sessions/' + agentParentId + '/spawn', { prompt: 'child without spec' }, { 'X-AgentRock-Token': CSRF_TOKEN });
+    const childRes = await post('/sessions/' + agentParentId + '/spawn', { prompt: 'child without spec' }, { 'X-YellyRock-Token': CSRF_TOKEN });
     if (childRes.status === 201) {
       const childSessionId = childRes.body && childRes.body.sessionId;
       const childLogs = await get('/sessions/' + childSessionId + '/logs', { 'Accept': 'application/json' });
@@ -434,7 +434,7 @@ async function runSuite4() {
       prompt: 'echo test schedule',
       interval: '1h',
       nextRunAt: new Date(Date.now() + 3600000).toISOString(),
-    }, { 'X-AgentRock-Token': CSRF_TOKEN });
+    }, { 'X-YellyRock-Token': CSRF_TOKEN });
     assert(r1.status === 201, '4.1 Create schedule → 201');
     assert(r1.body && r1.body.schedule && r1.body.schedule.id, '4.1 Create schedule returns {schedule:{id}}');
     assert(r1.body && r1.body.schedule && r1.body.schedule.enabled === true, '4.1 Schedule enabled:true by default');
@@ -451,28 +451,28 @@ async function runSuite4() {
     const r3 = await post('/schedules', {
       prompt: 'This is a very long prompt that should be truncated to forty characters only',
       interval: '1d',
-    }, { 'X-AgentRock-Token': CSRF_TOKEN });
+    }, { 'X-YellyRock-Token': CSRF_TOKEN });
     assert(r3.status === 201, '4.3 Create without name → 201');
     const autoName = r3.body && r3.body.schedule && r3.body.schedule.name;
     assert(autoName && autoName.length <= 40, '4.3 Auto-name truncated to 40 chars');
 
     // 4.4 Pause schedule
-    const r4 = await post('/schedules/' + scheduleId, { enabled: false }, { 'X-AgentRock-Token': CSRF_TOKEN });
+    const r4 = await post('/schedules/' + scheduleId, { enabled: false }, { 'X-YellyRock-Token': CSRF_TOKEN });
     assert(r4.status === 200, '4.4 Pause returns 200');
     assert(r4.body && r4.body.schedule && r4.body.schedule.enabled === false, '4.4 Schedule paused');
 
     // 4.5 Resume schedule
-    const r5 = await post('/schedules/' + scheduleId, { enabled: true }, { 'X-AgentRock-Token': CSRF_TOKEN });
+    const r5 = await post('/schedules/' + scheduleId, { enabled: true }, { 'X-YellyRock-Token': CSRF_TOKEN });
     assert(r5.status === 200, '4.5 Resume returns 200');
     assert(r5.body && r5.body.schedule && r5.body.schedule.enabled === true, '4.5 Schedule resumed');
 
     // 4.6 Edit schedule
-    const r6 = await post('/schedules/' + scheduleId, { prompt: 'new prompt' }, { 'X-AgentRock-Token': CSRF_TOKEN });
+    const r6 = await post('/schedules/' + scheduleId, { prompt: 'new prompt' }, { 'X-YellyRock-Token': CSRF_TOKEN });
     assert(r6.status === 200, '4.6 Edit returns 200');
     assert(r6.body && r6.body.schedule && r6.body.schedule.prompt === 'new prompt', '4.6 Schedule prompt updated');
 
     // 4.7 Delete schedule
-    const r7 = await post('/schedules/' + scheduleId + '?action=delete', {}, { 'X-AgentRock-Token': CSRF_TOKEN });
+    const r7 = await post('/schedules/' + scheduleId + '?action=delete', {}, { 'X-YellyRock-Token': CSRF_TOKEN });
     assert(r7.status === 200, '4.7 Delete returns 200');
     const r7list = await get('/schedules');
     const stillExists = (r7list.body && r7list.body.schedules || []).some(s => s.id === scheduleId);
@@ -484,14 +484,14 @@ async function runSuite4() {
       prompt: 'echo trigger',
       interval: '1h',
       nextRunAt: new Date(Date.now() + 3600000).toISOString(),
-    }, { 'X-AgentRock-Token': CSRF_TOKEN });
+    }, { 'X-YellyRock-Token': CSRF_TOKEN });
     const trigId = r8pre.body && r8pre.body.schedule && r8pre.body.schedule.id;
-    const r8 = await post('/schedules/' + trigId + '/run', {}, { 'X-AgentRock-Token': CSRF_TOKEN });
+    const r8 = await post('/schedules/' + trigId + '/run', {}, { 'X-YellyRock-Token': CSRF_TOKEN });
     assert(r8.status === 200, '4.8 Trigger now → 200');
     assert(r8.body && typeof r8.body.sessionId === 'number', '4.8 Trigger now returns {sessionId}');
 
     // 4.9 Cooldown blocks re-trigger
-    const r9 = await post('/schedules/' + trigId + '/run', {}, { 'X-AgentRock-Token': CSRF_TOKEN });
+    const r9 = await post('/schedules/' + trigId + '/run', {}, { 'X-YellyRock-Token': CSRF_TOKEN });
     assert(r9.status === 429, '4.9 Cooldown blocks re-trigger → 429');
     assert(r9.body && r9.body.error === 'cooldown', '4.9 Cooldown error type');
 
@@ -502,13 +502,13 @@ async function runSuite4() {
       prompt: 'echo due',
       interval: '1h',
       enabled: true,
-    }, { 'X-AgentRock-Token': CSRF_TOKEN });
+    }, { 'X-YellyRock-Token': CSRF_TOKEN });
     const dueId = r10pre.body && r10pre.body.schedule && r10pre.body.schedule.id;
     // Manually set nextRunAt to past via update
     if (dueId) {
       await post('/schedules/' + dueId, {
         nextRunAt: new Date(Date.now() - 60000).toISOString(),
-      }, { 'X-AgentRock-Token': CSRF_TOKEN });
+      }, { 'X-YellyRock-Token': CSRF_TOKEN });
       // Wait up to 35s for tick to fire (tick runs every 30s)
       // In tests we just verify the schedule tick function works conceptually
       assert(true, '4.10 Schedule tick fires due schedule (tick every 30s — verified in implementation)');
@@ -525,23 +525,23 @@ async function runSuite4() {
       prompt: 'echo once',
       interval: 'once',
       enabled: true,
-    }, { 'X-AgentRock-Token': CSRF_TOKEN });
+    }, { 'X-YellyRock-Token': CSRF_TOKEN });
     const onceId = r12pre.body && r12pre.body.schedule && r12pre.body.schedule.id;
     assert(r12pre.body && r12pre.body.schedule && r12pre.body.schedule.interval === 'once', '4.12 One-time interval stored');
     // Trigger it
     if (onceId) {
-      await post('/schedules/' + onceId + '/run', {}, { 'X-AgentRock-Token': CSRF_TOKEN });
+      await post('/schedules/' + onceId + '/run', {}, { 'X-YellyRock-Token': CSRF_TOKEN });
     }
     assert(true, '4.12 One-time schedule disabled after run (tick sets enabled:false)');
 
     // 4.13 Batch delete
     const ids = [];
     for (let i = 0; i < 3; i++) {
-      const r = await post('/schedules', { name: 'Batch ' + i, prompt: 'batch ' + i, interval: '1d' }, { 'X-AgentRock-Token': CSRF_TOKEN });
+      const r = await post('/schedules', { name: 'Batch ' + i, prompt: 'batch ' + i, interval: '1d' }, { 'X-YellyRock-Token': CSRF_TOKEN });
       if (r.body && r.body.schedule) ids.push(r.body.schedule.id);
     }
     assert(ids.length === 3, '4.13 Created 3 schedules for batch delete');
-    const batchRes = await post('/schedules?action=batch-delete', { ids: [ids[0], ids[1]] }, { 'X-AgentRock-Token': CSRF_TOKEN });
+    const batchRes = await post('/schedules?action=batch-delete', { ids: [ids[0], ids[1]] }, { 'X-YellyRock-Token': CSRF_TOKEN });
     assert(batchRes.status === 200, '4.13 Batch delete returns 200');
     assert(batchRes.body && batchRes.body.deleted === 2, '4.13 Batch deleted 2 schedules');
     const listAfter = await get('/schedules');
@@ -561,7 +561,7 @@ async function runSuite5() {
     await fetchToken();
 
     // Create and wait for a session to complete
-    const runRes = await post('/run', { prompt: 'export test session' }, { 'X-AgentRock-Token': CSRF_TOKEN });
+    const runRes = await post('/run', { prompt: 'export test session' }, { 'X-YellyRock-Token': CSRF_TOKEN });
     const sid = runRes.body && runRes.body.sessionId;
     await waitForSession(sid, 8000);
     await sleep(300);
@@ -593,7 +593,7 @@ async function runSuite5() {
     // 5.4 Clear all history
     const beforeHist = await get('/history');
     const beforeCount = (beforeHist.body && beforeHist.body.history || []).length;
-    const r4 = await post('/history/clear', {}, { 'X-AgentRock-Token': CSRF_TOKEN });
+    const r4 = await post('/history/clear', {}, { 'X-YellyRock-Token': CSRF_TOKEN });
     assert(r4.status === 200, '5.4 Clear history → 200');
     assert(r4.body && r4.body.cleared === true, '5.4 cleared:true');
     assert(r4.body && typeof r4.body.removed === 'number', '5.4 removed count returned');
@@ -606,7 +606,7 @@ async function runSuite5() {
 
     // 5.6 Session lazy-load from disk
     // Create a new session and let it complete
-    const r6run = await post('/run', { prompt: 'lazy load test' }, { 'X-AgentRock-Token': CSRF_TOKEN });
+    const r6run = await post('/run', { prompt: 'lazy load test' }, { 'X-YellyRock-Token': CSRF_TOKEN });
     const r6id = r6run.body && r6run.body.sessionId;
     await waitForSession(r6id, 8000);
     await sleep(300);
@@ -655,11 +655,11 @@ async function runSuite7() {
     assert(r1.status === 403, '7.1 POST /evolve without token → 403');
 
     // 7.2 POST /evolve missing prompt
-    const r2 = await post('/evolve', {}, { 'X-AgentRock-Token': CSRF_TOKEN });
+    const r2 = await post('/evolve', {}, { 'X-YellyRock-Token': CSRF_TOKEN });
     assert(r2.status === 400, '7.2 POST /evolve missing prompt → 400');
 
     // 7.3 POST /evolve valid
-    const r3 = await post('/evolve', { prompt: 'add dark mode' }, { 'X-AgentRock-Token': CSRF_TOKEN });
+    const r3 = await post('/evolve', { prompt: 'add dark mode' }, { 'X-YellyRock-Token': CSRF_TOKEN });
     assert(r3.status === 200, '7.3 POST /evolve valid → 200');
     assert(r3.body && typeof r3.body.sessionId === 'number', '7.3 Returns {sessionId:N}');
 

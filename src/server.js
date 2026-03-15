@@ -95,7 +95,7 @@ function validateSecurity(req, res) {
     // Add CORS headers for allowed origins
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-AgentRock-Token');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-YellyRock-Token');
   }
 
   // Rate limit: 100 req/min per origin
@@ -115,7 +115,7 @@ function validateSecurity(req, res) {
 
   // CSRF check for state-changing methods
   if (req.method === 'POST' || req.method === 'DELETE' || req.method === 'PUT' || req.method === 'PATCH') {
-    const token = req.headers['x-agentrock-token'];
+    const token = req.headers['x-yellyrock-token'];
     if (!token || token !== CSRF_TOKEN) {
       res.writeHead(403, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'invalid_csrf_token' }));

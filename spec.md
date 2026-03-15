@@ -53,20 +53,20 @@ Browser / YellyRock extension
 ```
 
 
-### PRG (Post-Redirect-Get) pattern for `/agentrock`
+### PRG (Post-Redirect-Get) pattern for `/yellyrock`
 
 
 Used when YellyRock extension opens a session via browser:
 
 
 ```
-1. GET /agentrock?initialPrompt=<text>&agentSpec=<name>&agentRepo=<repo>
+1. GET /yellyrock?initialPrompt=<text>&agentSpec=<name>&agentRepo=<repo>
   → server generates short token (timestamp36 + random6)
   → stores in pendingTokens Map: { prompt, agentSpec, agentRepo, createdAt, claimed:false }
-  → 302 redirect to /agentrock?sessionId=<token>
+  → 302 redirect to /yellyrock?sessionId=<token>
 
 
-2. GET /agentrock?sessionId=<token>
+2. GET /yellyrock?sessionId=<token>
   → claimToken(token): marks claimed=true, returns entry (or null if expired/missing)
   → if already claimed: show "Session In Progress" page
   → if token expired (>10 min): 410 Gone
@@ -75,7 +75,7 @@ Used when YellyRock extension opens a session via browser:
     → browser polls /sessions/:id/logs every 2000ms
 
 
-3. GET /agentrock?sessionId=<numericId>  (revisit after session completes)
+3. GET /yellyrock?sessionId=<numericId>  (revisit after session completes)
   → tokenToSessionId.get(token) → numeric id
   → serve unifiedSessionPage for active or history entry
 ```
@@ -331,7 +331,7 @@ Persisted keys: `id, name, prompt, agentSpec, interval, enabled, createdAt, next
 
 | Route | Method | Auth | Purpose |
 |---|---|---|---|
-| `/` or `/agentrock` | GET | — | Server Manager UI |
+| `/` or `/yellyrock` | GET | — | Server Manager UI |
 | `/run` | POST | CSRF | Execute prompt, return `{sessionId}` |
 | `/health` | GET | — | `{status:'ok', sessions:N}` |
 | `/token` | GET | — | Fetch CSRF token for browser JS |
@@ -364,7 +364,7 @@ Persisted keys: `id, name, prompt, agentSpec, interval, enabled, createdAt, next
 
 
 - **CORS**: Allowed origins loaded from YellyRock `@match` patterns at startup
-- **CSRF**: Single per-process token in `X-AgentRock-Token` header; required for all POST/DELETE
+- **CSRF**: Single per-process token in `X-YellyRock-Token` header; required for all POST/DELETE
 - **Rate limit**: 100 requests/minute per origin (in-memory counter, reset every 60s)
 - **Host validation**: Only `localhost` / `127.0.0.1` accepted
 - **Tool preapproval**: `v2/preapproval-rules.json` maps URL patterns + prompt keywords → allowed tools; never use `--dangerously-skip-permissions`
@@ -383,7 +383,7 @@ A running session can create child sessions:
 ```bash
 curl -s -X POST \
  -H "Content-Type: application/json" \
- -H "X-AgentRock-Token: $YELLYCLAW_TOKEN" \
+ -H "X-YellyRock-Token: $YELLYCLAW_TOKEN" \
  -d '{"prompt":"Do subtask X"}' \
  "http://localhost:$YELLYCLAW_PORT/sessions/$YELLYCLAW_SESSION_ID/spawn"
 # → {"sessionId":42,"parentId":7,"logsUrl":"/sessions/42/logs"}
@@ -512,7 +512,7 @@ proc.on('close', code => res.end(`\n[done] exit code: ${code}`))
 - `registerSession()` in `server.js` also tees output to in-memory buffer + `logs.txt`
 
 
-**Mode B: HTML polling (`asHtml=true`)** — used by GET /agentrock (browser entry)
+**Mode B: HTML polling (`asHtml=true`)** — used by GET /yellyrock (browser entry)
 ```
 1. res.end(streamingSessionPage(...))   // send HTML immediately, close response
 2. proc output → registerSession tee → in-memory buffer + logs.txt
@@ -543,7 +543,7 @@ User types: "check my GitHub issues every day at 9am"
       The user wants: '<text>'
       Run this curl to create the schedule:
         curl -X POST http://localhost:2026/schedules
-          -H 'X-AgentRock-Token: <token>'
+          -H 'X-YellyRock-Token: <token>'
           -d '{name, prompt, interval, nextRunAt, autoPause:true}'
       Field rules: interval mapping, nextRunAt from user's time hint, ..."
  → POST /run {prompt, allowTools:['shell']}  ← shell needed for curl
@@ -741,7 +741,7 @@ Uses the same minimal harness pattern as `kiro-runtime-server.test.js` (no Jest/
 |---|------|--------|------|-------|----------|
 | 1.1 | Valid host accepted | GET | `/health` | host: `localhost:2026` | 200 `{status:'ok'}` |
 | 1.2 | Invalid host rejected | GET | `/health` | host: `evil.com` | 403 |
-| 1.3 | POST without CSRF token | POST | `/run` | no `X-AgentRock-Token` | 403 |
+| 1.3 | POST without CSRF token | POST | `/run` | no `X-YellyRock-Token` | 403 |
 | 1.4 | POST with wrong CSRF token | POST | `/run` | wrong token | 403 |
 | 1.5 | POST with valid CSRF token | POST | `/run` | correct token, missing prompt | 400 (not 403) |
 | 1.6 | Disallowed origin rejected | GET | `/health` | `Origin: https://evil.com` | 403 |

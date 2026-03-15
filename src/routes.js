@@ -924,9 +924,9 @@ function handleListSessions(req, res, config) {
 }
 
 // ---------------------------------------------------------------------------
-// AgentRock PRG pattern
+// YellyRock PRG pattern
 // ---------------------------------------------------------------------------
-function handleAgentRock(req, res, config) {
+function handleYellyRock(req, res, config) {
   const { PENDING_TTL_MS = 10 * 60 * 1000 } = config;
   const url = new URL(req.url, `http://localhost`);
   const initialPrompt = url.searchParams.get('initialPrompt');
@@ -944,7 +944,7 @@ function handleAgentRock(req, res, config) {
       createdAt: Date.now(),
       claimed: false,
     });
-    res.writeHead(302, { Location: `/agentrock?sessionId=${token}` });
+    res.writeHead(302, { Location: `/yellyrock?sessionId=${token}` });
     res.end();
     return;
   }
@@ -1030,7 +1030,7 @@ function createRouter(config) {
       res.writeHead(204, {
         'Access-Control-Allow-Origin': req.headers['origin'] || '*',
         'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, X-AgentRock-Token',
+        'Access-Control-Allow-Headers': 'Content-Type, X-YellyRock-Token',
         'Access-Control-Max-Age': '86400',
       });
       res.end();
@@ -1049,9 +1049,9 @@ function createRouter(config) {
       return;
     }
 
-    // GET /agentrock
-    if (pathname === '/agentrock' && method === 'GET') {
-      return handleAgentRock(req, res, config);
+    // GET /yellyrock
+    if (pathname === '/yellyrock' && method === 'GET') {
+      return handleYellyRock(req, res, config);
     }
 
     // GET /health

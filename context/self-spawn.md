@@ -18,7 +18,7 @@ Every claude-code child process receives these environment variables:
 ```bash
 curl -s -X POST \
   -H "Content-Type: application/json" \
-  -H "X-AgentRock-Token: $YELLYCLAW_TOKEN" \
+  -H "X-YellyRock-Token: $YELLYCLAW_TOKEN" \
   -d '{"prompt":"Do subtask X"}' \
   "http://localhost:$YELLYCLAW_PORT/sessions/$YELLYCLAW_SESSION_ID/spawn"
 # → {"sessionId":42,"parentId":7,"logsUrl":"/sessions/42/logs"}
